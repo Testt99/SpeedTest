@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>قياس سرعة الإنترنت</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            direction: rtl;
+            background-color: #f3f4f6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        p {
+            color: #555;
+        }
+
+        .result {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #007BFF;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1rem;
+            color: #fff;
+            background-color: #007BFF;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>قياس سرعة الإنترنت</h1>
+        <p>اضغط على الزر أدناه لبدء قياس سرعة الإنترنت لديك.</p>
+        <button onclick="startSpeedTest()">ابدأ الاختبار</button>
+        <div id="results" style="margin-top: 20px;">
+            <p>سرعة التنزيل: <span id="downloadSpeed" class="result">--</span> Mbps</p>
+            <p>سرعة الرفع: <span id="uploadSpeed" class="result">--</span> Mbps</p>
+            <p>زمن الاستجابة: <span id="ping" class="result">--</span> ms</p>
+        </div>
+    </div>
+    <script>
+        function startSpeedTest() {
+            // استدعاء مكتبة قياس السرعة
+            const test = new Speedtest();
+            test.setParameter('test_order', 'ping,download,upload');
+            test.onupdate = function(data) {
+                document.getElementById('ping').innerText = (data.ping || 0).toFixed(2);
+                document.getElementById('downloadSpeed').innerText = (data.download || 0).toFixed(2);
+                document.getElementById('uploadSpeed').innerText = (data.upload || 0).toFixed(2);
+            };
+            test.onend = function() {
+                alert('تم الانتهاء من الاختبار.');
+            };
+            test.start();
+        }
+
+        // مكتبة Speedtest.js (تحتاج إلى تضمينها في المشروع)
+        class Speedtest {
+            constructor() {
+                this.results = {ping: null, download: null, upload: null};
+                this.onupdate = null;
+                this.onend = null;
+            }
+
+            async start() {
+                this.results.ping = await this.measurePing();
+                this.results.download = await this.measureDownload();
+                this.results.upload = await this.measureUpload();
+                if (this.onupdate) this.onupdate(this.results);
+                if (this.onend) this.onend();
+            }
+
+            async measurePing() {
+                const start = performance.now();
+                await fetch('https://www.google.com', {method: 'HEAD'});
+                return performance.now() - start;
+            }
+
+            async measureDownload() {
+                const start = performance.now();
+                const response = await fetch('https://speed.hetzner.de/100MB.bin');
+                await response.blob();
+                const end = performance.now();
+                const sizeInBits = 100 * 1024 * 1024 * 8; // 100MB in bits
+                return (sizeInBits / ((end - start) / 1000)) / 1e6; // Mbps
+            }
+
+            async measureUpload() {
+                const data = new Blob(['0'.repeat(10 * 1024 * 1024)]); // 10MB data
+                const start = performance.now();
+                await fetch('https://httpbin.org/post', {method: 'POST', body: data});
+                const end = performance.now();
+                const sizeInBits = 10 * 1024 * 1024 * 8; // 10MB in bits
+                return (sizeInBits / ((end - start) / 1000)) / 1e6; // Mbps
+            }
+        }
+    </script>
+</body>
+</html>
